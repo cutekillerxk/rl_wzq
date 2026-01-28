@@ -47,10 +47,11 @@ def evaluate_position_reward(board: np.ndarray, x: int, y: int, player: int,
     center_bonus = max(0, (board_size * 2 - dist_center) / (board_size * 2)) * 0.01
     reward += center_bonus
     
-    # 归一化：除以一个系数，确保中间奖励不会太大（最大约0.15-0.25）
+    # 归一化：除以一个系数，确保中间奖励不会太大（最大约0.1-0.15）
     # 这样最终胜负奖励（±1）仍然是最重要的
-    # 活四最高分5000，四个方向最多约20000，除以80000后约0.25
-    reward = reward / 80000.0
+    # 活四最高分5000，四个方向最多约20000，除以150000后约0.13
+    # 降低中间奖励权重，避免干扰最终奖励信号
+    reward = reward / 150000.0
     
     return reward
 

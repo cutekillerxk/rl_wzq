@@ -54,17 +54,21 @@ def train_dqn(
     env = GomokuEnv(opponent_difficulty=initial_difficulty)
     
     # 创建DQN智能体
+    # 改进的超参数：
+    # - epsilon_decay 改为更慢的衰减（0.9995），让探索更充分
+    # - lr 稍微提高（3e-4），加快学习速度
+    # - target_update 更频繁（500步），稳定训练
     agent = DQNAgent(
         state_shape=(15, 15),
         n_actions=225,
-        lr=1e-4,
+        lr=3e-4,  # 提高学习率
         gamma=0.99,
         epsilon_start=1.0,
-        epsilon_end=0.01,
-        epsilon_decay=0.995,
+        epsilon_end=0.05,  # 保持更多探索
+        epsilon_decay=0.9995,  # 更慢的衰减（5000步后约0.08）
         memory_size=100000,
         batch_size=64,
-        target_update=1000
+        target_update=500  # 更频繁更新target network
     )
     
     # 训练统计

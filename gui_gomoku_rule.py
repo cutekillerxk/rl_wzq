@@ -22,19 +22,30 @@ from gomoku_env import GomokuEnv
 
 
 class GomokuGUI:
-    def __init__(self, cell_size: int = 32):
+    def __init__(self, cell_size: int = 32, opponent_difficulty: float = 0.5):
+        """
+        初始化GUI
+        
+        Args:
+            cell_size: 每个格子的大小（像素）
+            opponent_difficulty: 对手（规则AI）难度，0.0-1.0
+                - 0.0: 完全随机
+                - 0.5: 中等强度（默认）
+                - 1.0: 最强
+        """
         self.cell_size = cell_size
         self.board_size = 15
         self.margin = 20  # 画布边缘留白
+        self.opponent_difficulty = opponent_difficulty
 
-        # 环境
-        self.env = GomokuEnv()
+        # 环境（传入难度参数）
+        self.env = GomokuEnv(opponent_difficulty=opponent_difficulty)
         self.state, self.info = self.env.reset()
         self.done = False
 
         # GUI 组件
         self.root = tk.Tk()
-        self.root.title("五子棋 - 人类 vs 规则AI")
+        self.root.title(f"五子棋 - 人类 vs 规则AI (难度: {opponent_difficulty:.2f})")
 
         canvas_size = self.margin * 2 + self.cell_size * (self.board_size - 1)
         self.canvas = tk.Canvas(self.root, width=canvas_size, height=canvas_size, bg="burlywood")
@@ -45,7 +56,7 @@ class GomokuGUI:
 
         # 状态栏
         self.status_var = tk.StringVar()
-        self.status_var.set("您执子为 X，规则AI 执子为 O。点击棋盘落子。")
+        self.status_var.set(f"您执子为 X，规则AI 执子为 O（难度: {opponent_difficulty:.2f}）。点击棋盘落子。")
         status_label = tk.Label(self.root, textvariable=self.status_var)
         status_label.pack(fill="x")
 
@@ -64,7 +75,7 @@ class GomokuGUI:
     def reset_game(self):
         self.state, self.info = self.env.reset()
         self.done = False
-        self.status_var.set("新的一局开始了：您执子为 X，规则AI 执子为 O。")
+        self.status_var.set(f"新的一局开始了：您执子为 X，规则AI 执子为 O（难度: {self.opponent_difficulty:.2f}）。")
         self.draw_board()
         self.draw_stones()
 
@@ -178,6 +189,19 @@ class GomokuGUI:
 
 
 if __name__ == "__main__":
-    gui = GomokuGUI()
+    import argparse
+    
+    parser = argparse.ArgumentParser(description='五子棋图形界面 - 人类 vs 规则AI')
+    parser.add_argument('--difficulty', type=float, default=0.5,
+                       help='对手（规则AI）难度 (0.0-1.0)，0.0=完全随机，0.5=中等，1.0=最强')
+    parser.add_argument('--cell-size', type=int, default=32,
+                       help='每个格子的大小（像素），默认32')
+    
+    args = parser.parse_args()
+    
+    # 限制难度在 [0.0, 1.0] 范围内
+    difficulty = max(0.0, min(1.0, args.difficulty))
+    
+    gui = GomokuGUI(cell_size=args.cell_size, opponent_difficulty=difficulty)
     gui.run()
 

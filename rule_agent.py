@@ -38,7 +38,8 @@ class RuleAgent:
                 - 1.0: 最强（完整策略）
         """
         self.board_size = 15
-        self.difficulty = difficulty
+        # 限制难度在 [0.0, 1.0] 范围内
+        self.difficulty = max(0.0, min(1.0, difficulty))
     
     def get_action(self, board: np.ndarray) -> Optional[Tuple[int, int]]:
         """
@@ -58,9 +59,12 @@ class RuleAgent:
 
         # 根据难度决定策略
         # 如果难度很低，有一定概率完全随机
-        if self.difficulty < 0.3 and np.random.random() < (0.3 - self.difficulty):
-            idx = np.random.randint(len(empty_positions))
-            return tuple(empty_positions[idx])
+        # 确保 (0.3 - self.difficulty) 在合理范围内（0.0 到 0.3）
+        if self.difficulty < 0.3:
+            random_prob = max(0.0, min(1.0, 0.3 - self.difficulty))
+            if np.random.random() < random_prob:
+                idx = np.random.randint(len(empty_positions))
+                return tuple(empty_positions[idx])
 
         # 策略1：优先自己能连五则取胜（只在难度较高时使用）
         if self.difficulty >= 0.7:
@@ -84,9 +88,13 @@ class RuleAgent:
                 score = self._evaluate_move(board, x, y)
             else:
                 # 低难度时，评分权重降低，更随机
-                score = self._evaluate_move(board, x, y) * self.difficulty * 2
+                # 确保 difficulty 在 [0, 0.5) 范围内，权重在 [0, 1) 范围内
+                weight = max(0.0, min(1.0, self.difficulty * 2))
+                score = self._evaluate_move(board, x, y) * weight
                 # 添加随机噪声，让选择更随机
-                score += np.random.random() * 1000 * (1 - self.difficulty)
+                # 确保 (1 - self.difficulty) 在 [0.5, 1.0] 范围内
+                noise_weight = max(0.0, min(1.0, 1 - self.difficulty))
+                score += np.random.random() * 1000 * noise_weight
             
             if score > best_score:
                 best_score = score
