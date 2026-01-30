@@ -173,6 +173,7 @@ class DQNAgent:
     def learn(self) -> Optional[Dict[str, float]]:
         """
         从经验回放缓冲区中采样并更新网络
+        使用Double DQN和Huber Loss提高稳定性
         
         Returns:
             训练统计信息（损失等），如果样本不足则返回None
@@ -194,19 +195,29 @@ class DQNAgent:
         # 计算当前Q值
         current_q_values = self.q_network(states).gather(1, actions.unsqueeze(1)).squeeze(1)
         
-        # 计算目标Q值（使用target network）
+        # Double DQN: 使用main network选择动作，target network评估Q值
+        # 这样可以减少Q值过估计问题
         with torch.no_grad():
-            next_q_values = self.target_network(next_states).max(1)[0]
+            # 使用main network选择下一个状态的最佳动作
+            next_actions = self.q_network(next_states).argmax(1)
+            # 使用target network评估这些动作的Q值
+            next_q_values = self.target_network(next_states).gather(1, next_actions.unsqueeze(1)).squeeze(1)
+            # 计算目标Q值（奖励缩放，防止Q值发散）
             target_q_values = rewards + (self.gamma * next_q_values * ~dones)
+            
+            # 裁剪目标Q值，防止Q值爆炸
+            target_q_values = torch.clamp(target_q_values, -10.0, 10.0)
         
-        # 计算损失
-        loss = nn.MSELoss()(current_q_values, target_q_values)
+        # 使用Huber Loss替代MSE Loss，对异常值更鲁棒
+        # Huber Loss在误差小时是MSE，误差大时是MAE，更稳定
+        huber_loss = nn.SmoothL1Loss()
+        loss = huber_loss(current_q_values, target_q_values)
         
         # 反向传播和优化
         self.optimizer.zero_grad()
         loss.backward()
-        # 梯度裁剪（防止梯度爆炸）
-        torch.nn.utils.clip_grad_norm_(self.q_network.parameters(), max_norm=1.0)
+        # 更严格的梯度裁剪（防止梯度爆炸）
+        torch.nn.utils.clip_grad_norm_(self.q_network.parameters(), max_norm=0.5)
         self.optimizer.step()
         
         # 更新训练步数
@@ -223,7 +234,8 @@ class DQNAgent:
         return {
             'loss': loss.item(),
             'epsilon': self.epsilon,
-            'q_mean': current_q_values.mean().item()
+            'q_mean': current_q_values.mean().item(),
+            'target_q_mean': target_q_values.mean().item()
         }
     
     def save(self, filepath: str):

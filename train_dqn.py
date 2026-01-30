@@ -44,9 +44,12 @@ def train_dqn(
     
     # 计算初始难度
     if curriculum_learning:
-        initial_difficulty = 0.3  # 课程学习从0.3开始
+        initial_difficulty = 0.0  # 课程学习从完全随机开始
         final_difficulty = opponent_difficulty
     else:
+        # 如果没有使用课程学习，但对手难度很低，建议使用课程学习
+        if opponent_difficulty < 0.2:
+            print("警告：对手难度过低，建议使用课程学习（--curriculum）")
         initial_difficulty = opponent_difficulty
         final_difficulty = opponent_difficulty
     
@@ -54,21 +57,22 @@ def train_dqn(
     env = GomokuEnv(opponent_difficulty=initial_difficulty)
     
     # 创建DQN智能体
-    # 改进的超参数：
-    # - epsilon_decay 改为更慢的衰减（0.9995），让探索更充分
-    # - lr 稍微提高（3e-4），加快学习速度
-    # - target_update 更频繁（500步），稳定训练
+    # 修复后的超参数（解决梯度爆炸和Q值发散问题）：
+    # - lr 降低到5e-5，提高训练稳定性
+    # - target_update 增加到2000步，减少目标Q值波动
+    # - epsilon_end 提高到0.1，延长探索时间，帮助模型找到有效策略
+    # - epsilon_decay 保持较慢衰减，确保充分探索
     agent = DQNAgent(
         state_shape=(15, 15),
         n_actions=225,
-        lr=3e-4,  # 提高学习率
+        lr=5e-5,  # 降低学习率，防止Q值发散
         gamma=0.99,
         epsilon_start=1.0,
-        epsilon_end=0.05,  # 保持更多探索
+        epsilon_end=0.1,  # 提高最小探索率，延长探索时间
         epsilon_decay=0.9995,  # 更慢的衰减（5000步后约0.08）
         memory_size=100000,
         batch_size=64,
-        target_update=500  # 更频繁更新target network
+        target_update=2000  # 减少更新频率，稳定目标Q值
     )
     
     # 训练统计

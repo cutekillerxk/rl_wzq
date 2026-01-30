@@ -107,21 +107,21 @@ class GomokuEnv(gym.Env):
             info['reason'] = 'position_occupied'
             return self.board.copy(), reward, terminated, truncated, info
         
+        # 在agent落子前，检查对手是否有一步必胜（用于奖励塑形）
+        opponent_win_before = self.rule_agent._find_winning_move(self.board, -1) is not None
+        
         # Agent落子
         self.board[x, y] = 1
         
-        # 计算agent落子后的进攻奖励（形成活四、冲四、活三等）
-        attack_reward = evaluate_position_reward(
-            self.board, x, y, player=1, board_size=self.board_size
-        )
-        reward += attack_reward
+        # 使用稀疏奖励设计（根据搜索结果，这是DQN训练五子棋的最佳实践）
+        # 只在关键步骤给予小奖励，主要奖励来自最终胜负
+        reward = 0.0
         
-        # 检查agent是否获胜
+        # 检查agent是否获胜（最高优先级）
         if check_win(self.board, 1):
-            reward = 1.0  # 最终奖励覆盖中间奖励
+            reward = 1.0  # 获胜奖励
             terminated = True
             info['winner'] = 'agent'
-            info['attack_reward'] = attack_reward
             return self.board.copy(), reward, terminated, truncated, info
         
         # 检查是否平局（agent落子后棋盘已满）
@@ -129,32 +129,46 @@ class GomokuEnv(gym.Env):
             reward = 0.0
             terminated = True
             info['winner'] = 'draw'
-            info['attack_reward'] = attack_reward
             return self.board.copy(), reward, terminated, truncated, info
+        
+        # 游戏继续：奖励塑形（更有效，但保持小范围）
+        # 1) 如果agent挡住了对手的一步必胜，给予小奖励
+        # 2) 如果agent制造了自己的一步必胜，给予小奖励
+        # 3) 如果agent让对手仍然有一步必胜，给予惩罚
+        opponent_win_after = self.rule_agent._find_winning_move(self.board, -1) is not None
+        agent_win_next = self.rule_agent._find_winning_move(self.board, 1) is not None
+        
+        if opponent_win_before and not opponent_win_after:
+            reward += 0.05
+        if opponent_win_after:
+            reward -= 0.05
+        if agent_win_next:
+            reward += 0.05
+        
+        # 结合棋型奖励（只对高价值棋型给予奖励）
+        attack_reward = evaluate_position_reward(
+            self.board, x, y, player=1, board_size=self.board_size
+        )
+        if attack_reward > 0.005:  # 放宽阈值，提供更密集但仍小的反馈
+            reward += min(attack_reward * 0.2, 0.05)
         
         # 对手（规则AI）落子
         opponent_action = self.rule_agent.get_action(self.board)
         if opponent_action is not None:
             opp_x, opp_y = opponent_action
-            
-            # 在对手落子前，评估如果对手在这里下，会形成什么威胁
-            # 这可以帮助计算"防守奖励"（如果agent阻止了对手的威胁位置）
-            # 但这里我们简化处理：对手下完后，如果对手形成了威胁，给agent负奖励
             self.board[opp_x, opp_y] = -1
             
-            # 计算对手落子后的威胁（给agent负奖励，表示对手形成了威胁）
+            # 对手落子后的威胁惩罚（小幅度）
             opponent_threat = evaluate_position_reward(
                 self.board, opp_x, opp_y, player=-1, board_size=self.board_size
             )
-            reward -= opponent_threat * 0.8  # 防守权重略低于进攻
+            reward -= min(opponent_threat * 0.1, 0.05)
             
             # 检查对手是否获胜
             if check_win(self.board, -1):
-                reward = -1.0  # 最终奖励覆盖中间奖励
+                reward = -1.0  # 失败奖励
                 terminated = True
                 info['winner'] = 'opponent'
-                info['attack_reward'] = attack_reward
-                info['defense_penalty'] = opponent_threat
                 return self.board.copy(), reward, terminated, truncated, info
             
             # 检查是否平局
@@ -162,14 +176,10 @@ class GomokuEnv(gym.Env):
                 reward = 0.0
                 terminated = True
                 info['winner'] = 'draw'
-                info['attack_reward'] = attack_reward
-                info['defense_penalty'] = opponent_threat
                 return self.board.copy(), reward, terminated, truncated, info
         
-        # 游戏继续，返回中间奖励（进攻奖励 - 对手威胁惩罚）
-        info['attack_reward'] = attack_reward
-        if opponent_action is not None:
-            info['defense_penalty'] = opponent_threat
+        # 裁剪中间奖励，避免过大（胜负奖励不受影响）
+        reward = np.clip(reward, -0.1, 0.1)
         return self.board.copy(), reward, terminated, truncated, info
     
     def render(self):

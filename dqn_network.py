@@ -46,10 +46,13 @@ class DQNNetwork(nn.Module):
         self._initialize_weights()
     
     def _initialize_weights(self):
-        """初始化网络权重"""
+        """初始化网络权重（使用更稳定的初始化方法）"""
         for m in self.modules():
             if isinstance(m, nn.Linear):
-                nn.init.xavier_uniform_(m.weight)
+                # 使用Kaiming初始化（He初始化），适合ReLU激活函数
+                # 缩放因子0.1，进一步减小初始权重，防止Q值过大
+                nn.init.kaiming_uniform_(m.weight, a=0, mode='fan_in', nonlinearity='relu')
+                m.weight.data *= 0.1  # 额外缩放，防止初始Q值过大
                 nn.init.constant_(m.bias, 0)
     
     def forward(self, x: torch.Tensor) -> torch.Tensor:
@@ -114,10 +117,18 @@ class DQNNetworkCNN(nn.Module):
         self._initialize_weights()
     
     def _initialize_weights(self):
-        """初始化网络权重"""
+        """初始化网络权重（使用更稳定的初始化方法）"""
         for m in self.modules():
-            if isinstance(m, (nn.Conv2d, nn.Linear)):
-                nn.init.xavier_uniform_(m.weight)
+            if isinstance(m, nn.Conv2d):
+                # 卷积层使用Kaiming初始化
+                nn.init.kaiming_uniform_(m.weight, a=0, mode='fan_in', nonlinearity='relu')
+                m.weight.data *= 0.1  # 额外缩放
+                if m.bias is not None:
+                    nn.init.constant_(m.bias, 0)
+            elif isinstance(m, nn.Linear):
+                # 全连接层使用Kaiming初始化
+                nn.init.kaiming_uniform_(m.weight, a=0, mode='fan_in', nonlinearity='relu')
+                m.weight.data *= 0.1  # 额外缩放
                 if m.bias is not None:
                     nn.init.constant_(m.bias, 0)
     

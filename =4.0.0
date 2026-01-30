@@ -1,0 +1,40 @@
+Looking in indexes: https://pypi.tuna.tsinghua.edu.cn/simple
+Collecting gradio
+  Downloading https://pypi.tuna.tsinghua.edu.cn/packages/bf/72/4f56a920147ce215e2286defc257a613b3b6d8c90cea323758a99ca0f9fa/gradio-6.5.1-py3-none-any.whl (24.2 MB)
+     ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 24.2/24.2 MB 19.6 MB/s  0:00:01
+Collecting aiofiles<25.0,>=22.0 (from gradio)
+  Using cached https://pypi.tuna.tsinghua.edu.cn/packages/a5/45/30bb92d442636f570cb5651bc661f52b610e2eec3f891a5dc3a4c3667db0/aiofiles-24.1.0-py3-none-any.whl (15 kB)
+Collecting anyio<5.0,>=3.0 (from gradio)
+  Downloading https://pypi.tuna.tsinghua.edu.cn/packages/38/0e/27be9fdef66e72d64c0cdc3cc2823101b80585f8119b5c112c2e8f5f7dab/anyio-4.12.1-py3-none-any.whl (113 kB)
+Collecting brotli>=1.1.0 (from gradio)
+  Downloading https://pypi.tuna.tsinghua.edu.cn/packages/48/10/f47854a1917b62efe29bc98ac18e5d4f71df03f629184575b862ef2e743b/brotli-1.2.0-cp310-cp310-manylinux2014_x86_64.manylinux_2_17_x86_64.whl (1.4 MB)
+     ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 1.4/1.4 MB 9.1 MB/s  0:00:00
+Collecting fastapi<1.0,>=0.115.2 (from gradio)
+  Downloading https://pypi.tuna.tsinghua.edu.cn/packages/5c/05/5cbb59154b093548acd0f4c7c474a118eda06da25aa75c616b72d8fcd92a/fastapi-0.128.0-py3-none-any.whl (103 kB)
+Collecting ffmpy (from gradio)
+  Using cached https://pypi.tuna.tsinghua.edu.cn/packages/55/56/dd3669eccebb6d8ac81e624542ebd53fe6f08e1b8f2f8d50aeb7e3b83f99/ffmpy-1.0.0-py3-none-any.whl (5.6 kB)
+Collecting gradio-client==2.0.3 (from gradio)
+  Downloading https://pypi.tuna.tsinghua.edu.cn/packages/70/11/758b76a14e1783549c71828b36e81c997b99683bc4ec14b28417dff3348f/gradio_client-2.0.3-py3-none-any.whl (55 kB)
+Collecting groovy~=0.1 (from gradio)
+  Using cached https://pypi.tuna.tsinghua.edu.cn/packages/28/27/3d6dcadc8a3214d8522c1e7f6a19554e33659be44546d44a2f7572ac7d2a/groovy-0.1.2-py3-none-any.whl (14 kB)
+Collecting httpx<1.0,>=0.24.1 (from gradio)
+  Using cached https://pypi.tuna.tsinghua.edu.cn/packages/2a/39/e50c7c3a983047577ee07d2a9e53faf5a69493943ec3f6a384bdc792deb2/httpx-0.28.1-py3-none-any.whl (73 kB)
+Collecting huggingface-hub<2.0,>=0.33.5 (from gradio)
+  Downloading https://pypi.tuna.tsinghua.edu.cn/packages/f9/84/a579b95c46fe8e319f89dc700c087596f665141575f4dcf136aaa97d856f/huggingface_hub-1.3.5-py3-none-any.whl (536 kB)
+     ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 536.7/536.7 kB 8.4 MB/s  0:00:00
+Requirement already satisfied: jinja2<4.0 in /media/data/hnu2025/xiongkui/envs/rl/lib/python3.10/site-packages (from gradio) (3.1.6)
+Requirement already satisfied: markupsafe<4.0,>=2.0 in /media/data/hnu2025/xiongkui/envs/rl/lib/python3.10/site-packages (from gradio) (3.0.3)
+Requirement already satisfied: numpy<3.0,>=1.0 in /media/data/hnu2025/xiongkui/envs/rl/lib/python3.10/site-packages (from gradio) (2.2.6)
+Collecting orjson~=3.0 (from gradio)
+  Downloading https://pypi.tuna.tsinghua.edu.cn/packages/4b/11/60ea7885a2b7c1bf60ed8b5982356078a73785bd3bab392041a5bcf8de7c/orjson-3.11.6-cp310-cp310-manylinux_2_17_x86_64.manylinux2014_x86_64.whl (145 kB)
+Requirement already satisfied: packaging in /media/data/hnu2025/xiongkui/envs/rl/lib/python3.10/site-packages (from gradio) (25.0)
+Collecting pandas<4.0,>=1.0 (from gradio)
+  Using cached https://pypi.tuna.tsinghua.edu.cn/packages/33/01/d40b85317f86cf08d853a4f495195c73815fdf205eef3993821720274518/pandas-2.3.3.tar.gz (4.5 MB)
+  Installing build dependencies: started
+  Installing build dependencies: finished with status 'done'
+  Getting requirements to build wheel: started
+  Getting requirements to build wheel: finished with status 'done'
+  Installing backend dependencies: started
+  Installing backend dependencies: finished with status 'done'
+  Preparing metadata (pyproject.toml): started
+  Preparing metadata (pyproject.toml): finished with status 'canceled'

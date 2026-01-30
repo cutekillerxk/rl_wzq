@@ -58,10 +58,19 @@ class RuleAgent:
             return None
 
         # 根据难度决定策略
-        # 如果难度很低，有一定概率完全随机
-        # 确保 (0.3 - self.difficulty) 在合理范围内（0.0 到 0.3）
+        # 如果难度为0，完全随机
+        if self.difficulty <= 0.0:
+            idx = np.random.randint(len(empty_positions))
+            return tuple(empty_positions[idx])
+        
+        # 低难度时显著提高随机性，让对手真正变弱
+        # 难度越低，越接近完全随机
+        if self.difficulty <= 0.1:
+            idx = np.random.randint(len(empty_positions))
+            return tuple(empty_positions[idx])
         if self.difficulty < 0.3:
-            random_prob = max(0.0, min(1.0, 0.3 - self.difficulty))
+            # 0.15 -> 0.725随机，0.3 -> 0.5随机
+            random_prob = max(0.0, min(1.0, 0.8 - (self.difficulty - 0.1) * 1.5))
             if np.random.random() < random_prob:
                 idx = np.random.randint(len(empty_positions))
                 return tuple(empty_positions[idx])
