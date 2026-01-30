@@ -19,47 +19,68 @@ class WebGomokuGame:
         self.env = GomokuEnv(opponent_difficulty=difficulty)
         self.state, self.info = self.env.reset()
         self.done = False
+        self.pending_ai = False
     
     def reset(self):
         """重置游戏"""
         self.env = GomokuEnv(opponent_difficulty=self.difficulty)
         self.state, self.info = self.env.reset()
         self.done = False
+        self.pending_ai = False
         return self._board_to_html(), "新的一局开始了！您执子为 X（黑子），规则AI 执子为 O（白子）。"
     
     def make_move(self, row: int, col: int):
         """执行一步动作"""
         if self.done:
             return self._board_to_html(), "本局已结束，请点击'重新开始'开始新的一局。"
+
+        if self.pending_ai:
+            return self._board_to_html(), "⚠️ AI 正在思考，请稍等。"
         
-        action = row * 15 + col
-        
-        # 执行动作
-        self.state, reward, terminated, truncated, info = self.env.step(action)
-        self.done = terminated or truncated
-        
-        if info.get("illegal_action", False):
-            reason = info.get("reason", "unknown")
-            if reason == "position_occupied":
-                msg = "⚠️ 该位置已有棋子，请选择空位。"
-            else:
-                msg = f"⚠️ 非法动作：{reason}"
-            return self._board_to_html(), msg
-        
-        # 检查游戏是否结束
-        if self.done:
-            winner = info.get("winner", "unknown")
-            if winner == "agent":
-                msg = "🎉 您获胜了！（X 连五）"
-            elif winner == "opponent":
-                msg = "😢 您失败了！（O 连五）"
-            elif winner == "draw":
-                msg = "🤝 平局！"
-            else:
-                msg = "对局结束。"
-            return self._board_to_html(), msg
-        
-        return self._board_to_html(), f"轮到您落子（X）。最近奖励：{reward:.2f}"
+        # 坐标检查
+        if not (0 <= row < 15 and 0 <= col < 15):
+            return self._board_to_html(), "⚠️ 非法位置，请选择棋盘内的空位。"
+        if self.env.board[row, col] != 0:
+            return self._board_to_html(), "⚠️ 该位置已有棋子，请选择空位。"
+
+        # 人类落子
+        self.env.board[row, col] = 1
+
+        # 检查人类是否获胜或平局
+        from utils import check_win, check_draw
+        if check_win(self.env.board, 1):
+            self.done = True
+            return self._board_to_html(), "🎉 您获胜了！（X 连五）"
+        if check_draw(self.env.board):
+            self.done = True
+            return self._board_to_html(), "🤝 平局！"
+
+        # 轮到 AI，标记等待
+        self.pending_ai = True
+        return self._board_to_html(), "✅ 您已落子，AI 思考中..."
+
+    def make_ai_move(self):
+        """执行 AI 落子（延迟触发）"""
+        if self.done or not self.pending_ai:
+            return self._board_to_html(), "轮到您落子（X）。"
+
+        opponent_action = self.env.rule_agent.get_action(self.env.board)
+        if opponent_action is not None:
+            opp_x, opp_y = opponent_action
+            self.env.board[opp_x, opp_y] = -1
+
+        from utils import check_win, check_draw
+        if check_win(self.env.board, -1):
+            self.done = True
+            self.pending_ai = False
+            return self._board_to_html(), "😢 您失败了！（O 连五）"
+        if check_draw(self.env.board):
+            self.done = True
+            self.pending_ai = False
+            return self._board_to_html(), "🤝 平局！"
+
+        self.pending_ai = False
+        return self._board_to_html(), "轮到您落子（X）。"
     
     def _board_to_html(self) -> str:
         """将棋盘转换为HTML表格，支持点击交叉点落子"""
@@ -129,6 +150,13 @@ def create_gradio_interface(difficulty: float = 0.5):
         css="""
 .hidden-component {
     display: none !important;
+}
+#board_html {
+    min-height: 560px;
+    background-color: #DEB887;
+}
+#board_html table {
+    transition: opacity 0.12s ease-in-out;
 }
 """
     ) as demo:
@@ -269,6 +297,7 @@ def create_gradio_interface(difficulty: float = 0.5):
         click_row = gr.Number(value=-1, elem_id="click_row", elem_classes="hidden-component")
         click_col = gr.Number(value=-1, elem_id="click_col", elem_classes="hidden-component")
         click_trigger = gr.Button("触发点击", elem_id="click_trigger", elem_classes="hidden-component")
+        ai_trigger = gr.Button("触发AI", elem_id="ai_trigger", elem_classes="hidden-component")
         
         # 监听board_html的自定义事件
         def process_click(row: float, col: float):
@@ -281,7 +310,19 @@ def create_gradio_interface(difficulty: float = 0.5):
         click_trigger.click(
             fn=process_click,
             inputs=[click_row, click_col],
-            outputs=[board_html, status_text]
+            outputs=[board_html, status_text],
+            show_progress="hidden"
+        )
+
+        def process_ai():
+            """处理AI落子"""
+            return game.make_ai_move()
+
+        ai_trigger.click(
+            fn=process_ai,
+            inputs=[],
+            outputs=[board_html, status_text],
+            show_progress="hidden"
         )
         
         # 改进的JavaScript：使用更可靠的方法，带重试机制和事件委托
@@ -341,6 +382,17 @@ def create_gradio_interface(difficulty: float = 0.5):
         setTimeout(function() {
           triggerBtn.click();
           console.log('[Click] ✅ 已触发按钮点击');
+          // 0.5秒后触发AI落子
+          setTimeout(function() {
+            var aiEl = document.getElementById('ai_trigger') ||
+                       document.querySelector('[data-testid="ai_trigger"]');
+            var aiBtn = aiEl
+              ? (aiEl.tagName === 'BUTTON' ? aiEl : aiEl.querySelector('button'))
+              : null;
+            if (aiBtn) {
+              aiBtn.click();
+            }
+          }, 500);
         }, 50);
       } else if (retryCount < maxRetries) {
         console.log('[Click] 未找到输入/按钮，200ms后重试');
@@ -397,6 +449,17 @@ def create_gradio_interface(difficulty: float = 0.5):
     }
   }
   
+  // 平滑更新：在DOM更新后做一次淡入，避免闪烁
+  function applySmoothUpdate() {
+    var table = document.getElementById('gomoku_board');
+    if (table) {
+      table.style.opacity = '0';
+      requestAnimationFrame(function() {
+        table.style.opacity = '1';
+      });
+    }
+  }
+  
   // 鼠标悬停效果
   function setupHoverEffects() {
     var table = document.getElementById('gomoku_board');
@@ -420,6 +483,7 @@ def create_gradio_interface(difficulty: float = 0.5):
   function init() {
     setupClickHandler();
     setupHoverEffects();
+    applySmoothUpdate();
   }
   
   // 页面加载完成后初始化
@@ -434,6 +498,7 @@ def create_gradio_interface(difficulty: float = 0.5):
     console.log('[Observer] HTML更新，重新设置事件');
     setupClickHandler();
     setupHoverEffects();
+    applySmoothUpdate();
   });
   
   // 观察board_html的变化
@@ -467,7 +532,8 @@ def create_gradio_interface(difficulty: float = 0.5):
         reset_btn.click(
             fn=reset_game,
             inputs=[],
-            outputs=[board_html, status_text]
+            outputs=[board_html, status_text],
+            show_progress="hidden"
         )
     
     return demo, game
